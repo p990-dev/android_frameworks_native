@@ -36,6 +36,20 @@
 
 namespace android {
 // ----------------------------------------------------------------------------
+/*
+ * Structure to hold the buffer geometry
+ */
+struct BufGeometry {
+    int mWidth;
+    int mHeight;
+    int mFormat;
+    BufGeometry(): mWidth(0), mHeight(0), mFormat(0) {}
+    void set(int w, int h, int f) {
+        mWidth = w;
+        mHeight = h;
+        mFormat = f;
+    }
+};
 
 class BufferQueue : public BnGraphicBufferProducer,
                     public BnGraphicBufferConsumer,
@@ -215,9 +229,57 @@ public:
     // dequeue buffer.
     virtual status_t setBuffersSize(int size);
 
+    // update buffer width, height and format for a native buffer
+    // dynamically from the client which will take effect in the next
+    // queue buffer.
+    virtual status_t updateBuffersGeometry(int w, int h, int f);
+
+    // public facing structure for BufferSlot
+    struct BufferItem {
+
+        BufferItem()
+         :
+           mTransform(0),
+           mScalingMode(NATIVE_WINDOW_SCALING_MODE_FREEZE),
+           mTimestamp(0),
+           mFrameNumber(0),
+           mBuf(INVALID_BUFFER_SLOT) {
+             mCrop.makeInvalid();
+        }
+        // mGraphicBuffer points to the buffer allocated for this slot, or is NULL
+        // if the buffer in this slot has been acquired in the past (see
+        // BufferSlot.mAcquireCalled).
+        sp<GraphicBuffer> mGraphicBuffer;
+
+        // mCrop is the current crop rectangle for this buffer slot.
+        Rect mCrop;
+
+        // mTransform is the current transform flags for this buffer slot.
+        uint32_t mTransform;
+
+        // mScalingMode is the current scaling mode for this buffer slot.
+        uint32_t mScalingMode;
+
+        // mTimestamp is the current timestamp for this buffer slot. This gets
+        // to set by queueBuffer each time this slot is queued.
+        int64_t mTimestamp;
+
+        // mFrameNumber is the number of the queued frame for this slot.
+        uint64_t mFrameNumber;
+
+        // mBuf is the slot index of this buffer
+        int mBuf;
+
+        // mFence is a fence that will signal when the buffer is idle.
+        sp<Fence> mFence;
+    };
+
+    // The following public functions are the consumer-facing interface
+
     /*
      * IGraphicBufferConsumer interface
      */
+
     // acquireBuffer attempts to acquire ownership of the next pending buffer in
     // the BufferQueue.  If no buffer is pending then it returns -EINVAL.  If a
     // buffer is successfully acquired, the information about the buffer is
@@ -573,6 +635,9 @@ private:
 
     // mConnectedProducerToken is used to set a binder death notification on the producer
     sp<IBinder> mConnectedProducerToken;
+
+   // holds the updated buffer geometry info of the new video resolution.
+   BufGeometry mNextBufferInfo;
 };
 
 // ----------------------------------------------------------------------------
