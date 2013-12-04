@@ -598,22 +598,26 @@ void HWComposer::eventControl(int disp, int event, int enabled) {
         return;
     }
     status_t err = NO_ERROR;
-    if (mHwc && !mDebugForceFakeVSync) {
-        // NOTE: we use our own internal lock here because we have to call
-        // into the HWC with the lock held, and we want to make sure
-        // that even if HWC blocks (which it shouldn't), it won't
-        // affect other threads.
-        Mutex::Autolock _l(mEventControlLock);
-        const int32_t eventBit = 1UL << event;
-        const int32_t newValue = enabled ? eventBit : 0;
-        const int32_t oldValue = mDisplayData[disp].events & eventBit;
-        if (newValue != oldValue) {
-            ATRACE_CALL();
-            err = mHwc->eventControl(mHwc, disp, event, enabled);
-            if (!err) {
-                int32_t& events(mDisplayData[disp].events);
-                events = (events & ~eventBit) | newValue;
+    if (mHwc && !mDebugForceFakeVSync && hwcHasVsyncEvent(mHwc))  {
+        if (hwcHasApiVersion(mHwc, HWC_DEVICE_API_VERSION_1_0)) {
+            // NOTE: we use our own internal lock here because we have to call
+            // into the HWC with the lock held, and we want to make sure
+            // that even if HWC blocks (which it shouldn't), it won't
+            // affect other threads.
+            Mutex::Autolock _l(mEventControlLock);
+            const int32_t eventBit = 1UL << event;
+            const int32_t newValue = enabled ? eventBit : 0;
+            const int32_t oldValue = mDisplayData[disp].events & eventBit;
+            if (newValue != oldValue) {
+                ATRACE_CALL();
+                err = hwcEventControl(mHwc, disp, event, enabled);
+                if (!err) {
+                    int32_t& events(mDisplayData[disp].events);
+                    events = (events & ~eventBit) | newValue;
+                }
             }
+        } else {
+            err = hwcEventControl(mHwc, disp, event, enabled);
         }
         // error here should not happen -- not sure what we should
         // do if it does.
@@ -747,14 +751,13 @@ status_t HWComposer::prepare() {
                 disp.hasFbComp = false;
                 disp.hasOvComp = false;
                 if (disp.list) {
-                    for (size_t j=0 ; j<disp.list->numHwLayers ; j++) {
-                        hwc_layer_1_t& l = disp.list->hwLayers[j];
+                    for (size_t i=0 ; i<hwcNumHwLayers(mHwc, disp.list) ; i++) {
+                        hwc_layer_1_t& l = disp.list->hwLayers[i];
 
                         //ALOGD("prepare: %d, type=%d, handle=%p",
                         //        i, l.compositionType, l.handle);
 
-                        if ((i == DisplayDevice::DISPLAY_PRIMARY) &&
-                                    l.flags & HWC_SKIP_LAYER) {
+                        if (l.flags & HWC_SKIP_LAYER) {
                             l.compositionType = HWC_FRAMEBUFFER;
                         }
                         if (l.compositionType == HWC_FRAMEBUFFER) {
@@ -771,8 +774,9 @@ status_t HWComposer::prepare() {
             disp.hasFbComp = false;
             disp.hasOvComp = false;
             if (disp.list) {
-                for (size_t i=0 ; i<disp.list->numHwLayers ; i++) {
-                    hwc_layer_1_t& l = disp.list->hwLayers[i];
+                hwc_layer_list_t* list0 = reinterpret_cast<hwc_layer_list_t*>(disp.list);
+                for (size_t i=0 ; i<hwcNumHwLayers(mHwc, disp.list) ; i++) {
+                    hwc_layer_t& l = list0->hwLayers[i];
 
                     //ALOGD("prepare: %d, type=%d, handle=%p",
                     //        i, l.compositionType, l.handle);

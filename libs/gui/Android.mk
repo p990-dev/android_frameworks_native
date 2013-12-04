@@ -49,6 +49,13 @@ endif
     LOCAL_CFLAGS += -DQCOM_BSP
 endif
 
+ifeq ($(BOARD_EGL_NEEDS_LEGACY_FB),true)
+    LOCAL_CFLAGS += -DBOARD_EGL_NEEDS_LEGACY_FB
+    ifneq ($(TARGET_BOARD_PLATFORM),exynos4)
+        LOCAL_CFLAGS += -DSURFACE_SKIP_FIRST_DEQUEUE
+    endif
+endif
+
 LOCAL_MODULE:= libgui
 
 ifeq ($(TARGET_BOARD_PLATFORM), tegra)
@@ -66,6 +73,10 @@ endif
 
 ifeq ($(SENSORS_NEED_SETRATE_ON_ENABLE), true)
         LOCAL_CFLAGS += -DSENSORS_SETRATE_ON_ENABLE
+endif
+
+ifeq ($(TARGET_TOROPLUS_RADIO), true)
+	LOCAL_CFLAGS += -DTOROPLUS_RADIO
 endif
 
 include $(BUILD_SHARED_LIBRARY)

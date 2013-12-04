@@ -53,3 +53,4 @@ extern "C" void _ZN7android10MemoryBaseC1ERKNS_2spINS_11IMemoryHeapEEElj(void* o
     ALOGW("Using temporary compatibility workaround for usage of MemoryBase "
           "private API. Please fix your application!");
 }
+
