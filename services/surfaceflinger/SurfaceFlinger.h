@@ -100,8 +100,7 @@ public:
     void run() ANDROID_API;
 
     enum {
-        EVENT_VSYNC = HWC_EVENT_VSYNC,
-        EVENT_ORIENTATION = HWC_EVENT_ORIENTATION
+        EVENT_VSYNC = HWC_EVENT_VSYNC
     };
 
     // post an asynchronous message to the main thread
