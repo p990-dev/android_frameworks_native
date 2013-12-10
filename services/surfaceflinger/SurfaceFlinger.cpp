@@ -2920,10 +2920,12 @@ status_t SurfaceFlinger::captureScreen(const sp<IBinder>& display,
         virtual bool handler() {
             Mutex::Autolock _l(flinger->mStateLock);
             sp<const DisplayDevice> hw(flinger->getDisplayDevice(display));
+#ifndef BOARD_EGL_NEEDS_LEGACY_FB
             bool useReadPixels = this->useReadPixels && !flinger->mGpuToCpuSupported;
             result = flinger->captureScreenImplLocked(hw,
                     producer, reqWidth, reqHeight, minLayerZ, maxLayerZ,
                     useReadPixels);
+#endif
             static_cast<GraphicProducerWrapper*>(producer->asBinder().get())->exit(result);
             return true;
         }
@@ -3084,6 +3086,7 @@ status_t SurfaceFlinger::captureScreenImplLocked(
                             // not fatal
                         }
 
+#ifndef BOARD_EGL_NEEDS_LEGACY_FB
                         if (useReadPixels) {
                             sp<GraphicBuffer> buf = static_cast<GraphicBuffer*>(buffer);
                             void* vaddr;
@@ -3092,6 +3095,7 @@ status_t SurfaceFlinger::captureScreenImplLocked(
                                 buf->unlock();
                             }
                         }
+#endif
 
                         if (DEBUG_SCREENSHOTS) {
                             uint32_t* pixels = new uint32_t[reqWidth*reqHeight];
